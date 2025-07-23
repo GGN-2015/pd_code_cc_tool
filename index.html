@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PD_CODE 连通分支计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        accent: '#0ea5e9',
+                        neutral: '#f1f5f9',
+                        'neutral-dark': '#1e293b',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .transition-custom {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex flex-col">
+    <header class="bg-white/80 backdrop-blur-md shadow-sm py-4 px-6 sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-exchange text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-neutral-dark">PD_CODE 连通分支计算器</h1>
+            </div>
+            <div class="hidden md:flex items-center space-x-4">
+                <button
+                    class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-custom flex items-center"
+                    onclick='window.location.href="https://github.com/GGN-2015/pd_code_cc_tool";'>
+                    <i class="fa fa-github mr-2"></i> GitHub
+                </button>
+            </div>
+            <button class="md:hidden text-neutral-dark text-xl">
+                <i class="fa fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <section
+            class="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 transform hover:shadow-xl transition-custom">
+            <div class="text-center mb-8">
+                <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-neutral-dark mb-3">PD_CODE 处理工具</h2>
+                <p class="text-secondary max-w-2xl mx-auto">分析链环连通分支数目，并确定每个连通分支的弧线段编号集合</p>
+            </div>
+
+            <div class="mb-6">
+                <label for="inputText" class="block text-sm font-medium text-neutral-dark mb-2">输入 PD_CODE</label>
+                <div class="relative">
+                    <textarea id="inputText" rows="8"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none resize-none transition-custom"
+                        placeholder="请输入需要处理的 PD_CODE 例如 [[1, 5, 2, 4], [3, 1, 4, 6], [5, 3, 6, 2]] ..."></textarea>
+                    <div class="absolute right-3 bottom-3 text-xs text-secondary" id="charCount">0 字符</div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-4 justify-center mb-8">
+                <button id="processBtn"
+                    class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-custom flex items-center">
+                    <i class="fa fa-magic mr-2"></i> 开始计算（回车）
+                </button>
+                <button id="clearBtn"
+                    class="bg-gray-200 hover:bg-gray-300 text-neutral-dark px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-custom flex items-center">
+                    <i class="fa fa-trash mr-2"></i> 清空
+                </button>
+                <button id="copyBtn"
+                    class="bg-accent hover:bg-accent/90 text-white px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-custom flex items-center">
+                    <i class="fa fa-clipboard mr-2"></i> 复制结果
+                </button>
+            </div>
+
+            <div>
+                <label for="outputText" class="block text-sm font-medium text-neutral-dark mb-2">处理结果</label>
+                <div class="relative">
+                    <textarea id="outputText" rows="8"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none resize-none transition-custom"
+                        placeholder="处理结果将显示在这里..." readonly></textarea>
+                    <div class="absolute right-3 bottom-3 text-xs text-secondary" id="resultCount">0 字符</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white/80 backdrop-blur-md py-6 px-4">
+        <div class="container mx-auto text-center text-secondary text-sm">
+            <p>© 2025 PD_CODE 连通分支计算器 | 一个简单实用的拓扑学小工具</p>
+        </div>
+    </footer>
+
+    <script>
+        // 获取DOM元素
+        const inputText = document.getElementById('inputText');
+        const outputText = document.getElementById('outputText');
+        const processBtn = document.getElementById('processBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const charCount = document.getElementById('charCount');
+        const resultCount = document.getElementById('resultCount');
+
+        // 更新字符计数
+        function updateCharCount() {
+            charCount.textContent = `${inputText.value.length} 字符`;
+        }
+
+        function extractIntegers(inputString) {
+            // 用于存储提取出的整数
+            const integers = [];
+            // 用于记录当前处理的数字字符串
+            let currentNumber = '';
+            // 用于标记是否正在处理一个数字
+            let isProcessingNumber = false;
+
+            // 遍历字符串中的每个字符
+            for (let i = 0; i < inputString.length; i++) {
+                const char = inputString[i];
+                // 检查字符是否为数字
+                if (/^\d$/.test(char)) {
+                    currentNumber += char;
+                    isProcessingNumber = true;
+                } else if (char === ' ') {
+                    // 如果遇到空格且之前正在处理数字，则将当前数字存入数组
+                    if (isProcessingNumber) {
+                        integers.push(parseInt(currentNumber, 10));
+                        currentNumber = '';
+                        isProcessingNumber = false;
+                    }
+                } else {
+                    // 遇到非数字和非空格字符，抛出错误
+                    throw new Error(`无效字符 '${char}' 出现在位置 ${i}，输入字符串只能包含空格和数字。`);
+                }
+            }
+
+            // 处理字符串结尾的数字
+            if (isProcessingNumber) {
+                integers.push(parseInt(currentNumber, 10));
+            }
+
+            return integers;
+        }
+
+        // 统计一个 list 中每个元素出现的次数
+        function countElements(arr) {
+            const counts = {};
+            for (const element of arr) {
+                // 使用元素作为键，出现次数作为值
+                counts[element] = (counts[element] || 0) + 1;
+            }
+            return counts;
+        }
+
+        // 我的算法：确定连通分支并输出最终答案
+        function myAlgorithm(integer_list) {
+            const data_stat = countElements(integer_list);
+            for (const key in data_stat) {
+                if(data_stat[key] != 2) {
+                    return "PD_CODE 不合法（原因：整数 " + key + " 出现次数应当恰为两次，但出现了 " + data_stat[key] + " 次），请重新输入";
+                }
+            }
+            const next_point = {}; // 记录每一个节点的后继节点
+            const all_elements = [];
+            for(var i = 0; i < integer_list.length; i += 4) {
+                // 如果一个对象的后继未定义那么就初始化成空 list
+                for(var j = 0; j < 4; j += 1) {
+                    const xnow = integer_list[i + j];
+                    next_point[xnow] = (next_point[xnow] || []);
+
+                    if(!all_elements.includes(xnow)) { // 记录所有出现过的数值
+                        all_elements.push(xnow);
+                    }
+
+                    // 将元素放到列表中
+                    const xnxt = integer_list[i + (j + 2) % 4];
+                    if(!next_point[JSON.stringify(xnow)].includes(JSON.stringify(xnxt))) { // 如果不存在就将其加入到其中
+                        next_point[JSON.stringify(xnow)].push(JSON.stringify(xnxt));
+                    }
+                }
+            }
+            all_elements.sort((a, b) => a - b); // 先按照数值从小到大排序，再将其中的所有东西转化成字符串（用于确定 dfs 顺序）
+            for(var i = 0; i < all_elements.length; i += 1) {
+                all_elements[i] = JSON.stringify(all_elements[i]);
+            }
+            const vis = {};
+            const block = {}; // 记录所有连通分支
+            function dfs(x, base, next_point) {
+                vis[x] = 1;
+                block[base] = (block[base] || []); // 记录以 base 为代表元的所有节点
+                if(!block[base].includes(x)) {     // 引入这个新的节点
+                    block[base].push(x);
+                    for(const nxt of next_point[x]) {
+                        dfs(nxt, base, next_point);
+                    }
+                }
+            }
+            for(const idx in all_elements) { // 使用 dfs 遍历整个图
+                const element = all_elements[idx];
+                vis[element] = (vis[element] || 0);
+                if(vis[element] == 0) {
+                    dfs(element, element, next_point);
+                    for(var i = 0; i < block[element].length; i += 1) {
+                        block[element][i] = parseInt(block[element][i], 10); // 将字符串重新解析成数值
+                    }
+                    block[element].sort((a, b) => a - b); // 按照数值从小到大排序
+                }
+            }
+            var answer_string = "总共找到 " + Object.keys(block).length + " 个连通分支\n";
+            var cnt = 0;
+            for(const element in block) {
+                cnt += 1;
+                answer_string += "第 " + cnt + " 个连通分支: " + JSON.stringify(block[element]);
+                answer_string += "\n";
+            }
+            return answer_string;
+        }
+
+        /**
+         * 判断字符串是否仅包含空格（或为空字符串）
+         * @param {string} str - 需要检查的字符串
+         * @returns {boolean} - 如果仅包含空格或为空则返回 true，否则返回 false
+         */
+        function isOnlySpaces(str) {
+            // 使用正则表达式匹配：空字符串 或 仅由一个或多个空格组成的字符串
+            // ^ 表示字符串开头，$ 表示字符串结尾，\s* 表示零个或多个空白字符（包括空格、制表符等，但题目明确为空格，这里兼容处理）
+            const regex = /^\s*$/;
+            return regex.test(str);
+        }
+
+        // 处理文本
+        function processText() {
+            const text = inputText.value;
+            // 使用正则表达式将非数字字符替换为空格
+            const processedText = text.replace(/[^0-9]/g, ' ');
+            const integer_list = extractIntegers(processedText);
+
+            if(isOnlySpaces(processedText)) {
+                outputText.value = "PD_CODE 不合法（原因：输入数据中不包含任何整数），请重新输入";
+            }else if(integer_list.length % 4 != 0) {
+                outputText.value = "PD_CODE 不合法（原因：整数总数目不是四的倍数），请重新输入";
+            }else {
+                outputText.value = myAlgorithm(integer_list);
+            }
+            
+            resultCount.textContent = `${outputText.value.length} 字符`;
+
+            // 添加处理动画效果
+            outputText.classList.add('ring-2', 'ring-green-500');
+            setTimeout(() => {
+                outputText.classList.remove('ring-2', 'ring-green-500');
+            }, 500);
+        }
+
+        // 清空文本
+        function clearText() {
+            inputText.value = '';
+            outputText.value = '';
+            updateCharCount();
+            resultCount.textContent = '0 字符';
+
+            // 添加清空动画效果
+            inputText.classList.add('ring-2', 'ring-red-500');
+            outputText.classList.add('ring-2', 'ring-red-500');
+            setTimeout(() => {
+                inputText.classList.remove('ring-2', 'ring-red-500');
+                outputText.classList.remove('ring-2', 'ring-red-500');
+            }, 300);
+        }
+
+        // 复制结果
+        function copyResult() {
+            if (outputText.value) {
+                outputText.select();
+                document.execCommand('copy');
+
+                // 更改按钮文本显示复制成功
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fa fa-check mr-2"></i> 已复制';
+                copyBtn.classList.add('bg-green-500');
+
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.classList.remove('bg-green-500');
+                }, 2000);
+            }
+        }
+
+        // 添加事件监听器
+        inputText.addEventListener('input', updateCharCount);
+        processBtn.addEventListener('click', processText);
+        clearBtn.addEventListener('click', clearText);
+        copyBtn.addEventListener('click', copyResult);
+
+        // 支持回车键处理（Shift+Enter换行）
+        inputText.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                processText();
+            }
+        });
+
+        // 初始化
+        updateCharCount();
+    </script>
+</body>
+
+</html>
