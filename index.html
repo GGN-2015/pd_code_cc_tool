@@ -73,7 +73,7 @@
                 <div class="relative">
                     <textarea id="inputText" rows="8"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none resize-none transition-custom"
-                        placeholder="请输入需要处理的 PD_CODE 例如 [[1, 5, 2, 4], [3, 1, 4, 6], [5, 3, 6, 2]] ..."></textarea>
+                        placeholder="请输入需要处理的 PD_CODE 例如 [[1, 5, 2, 4], [3, 1, 4, 6], [5, 3, 6, 2]] 或者 X6172 X10,3,11,4 X14,8,15,7 X16,11,5,12 X12,15,13,16 X8,14,9,13 X2536 X4,9,1,10 ..."></textarea>
                     <div class="absolute right-3 bottom-3 text-xs text-secondary" id="charCount">0 字符</div>
                 </div>
             </div>
@@ -176,31 +176,31 @@
         function myAlgorithm(integer_list) {
             const data_stat = countElements(integer_list);
             for (const key in data_stat) {
-                if(data_stat[key] != 2) {
+                if (data_stat[key] != 2) {
                     return "PD_CODE 不合法（原因：整数 " + key + " 出现次数应当恰为两次，但出现了 " + data_stat[key] + " 次），请重新输入";
                 }
             }
             const next_point = {}; // 记录每一个节点的后继节点
             const all_elements = [];
-            for(var i = 0; i < integer_list.length; i += 4) {
+            for (var i = 0; i < integer_list.length; i += 4) {
                 // 如果一个对象的后继未定义那么就初始化成空 list
-                for(var j = 0; j < 4; j += 1) {
+                for (var j = 0; j < 4; j += 1) {
                     const xnow = integer_list[i + j];
                     next_point[xnow] = (next_point[xnow] || []);
 
-                    if(!all_elements.includes(xnow)) { // 记录所有出现过的数值
+                    if (!all_elements.includes(xnow)) { // 记录所有出现过的数值
                         all_elements.push(xnow);
                     }
 
                     // 将元素放到列表中
                     const xnxt = integer_list[i + (j + 2) % 4];
-                    if(!next_point[JSON.stringify(xnow)].includes(JSON.stringify(xnxt))) { // 如果不存在就将其加入到其中
+                    if (!next_point[JSON.stringify(xnow)].includes(JSON.stringify(xnxt))) { // 如果不存在就将其加入到其中
                         next_point[JSON.stringify(xnow)].push(JSON.stringify(xnxt));
                     }
                 }
             }
             all_elements.sort((a, b) => a - b); // 先按照数值从小到大排序，再将其中的所有东西转化成字符串（用于确定 dfs 顺序）
-            for(var i = 0; i < all_elements.length; i += 1) {
+            for (var i = 0; i < all_elements.length; i += 1) {
                 all_elements[i] = JSON.stringify(all_elements[i]);
             }
             const vis = {};
@@ -208,19 +208,19 @@
             function dfs(x, base, next_point) {
                 vis[x] = 1;
                 block[base] = (block[base] || []); // 记录以 base 为代表元的所有节点
-                if(!block[base].includes(x)) {     // 引入这个新的节点
+                if (!block[base].includes(x)) {     // 引入这个新的节点
                     block[base].push(x);
-                    for(const nxt of next_point[x]) {
+                    for (const nxt of next_point[x]) {
                         dfs(nxt, base, next_point);
                     }
                 }
             }
-            for(const idx in all_elements) { // 使用 dfs 遍历整个图
+            for (const idx in all_elements) { // 使用 dfs 遍历整个图
                 const element = all_elements[idx];
                 vis[element] = (vis[element] || 0);
-                if(vis[element] == 0) {
+                if (vis[element] == 0) {
                     dfs(element, element, next_point);
-                    for(var i = 0; i < block[element].length; i += 1) {
+                    for (var i = 0; i < block[element].length; i += 1) {
                         block[element][i] = parseInt(block[element][i], 10); // 将字符串重新解析成数值
                     }
                     block[element].sort((a, b) => a - b); // 按照数值从小到大排序
@@ -228,7 +228,7 @@
             }
             var answer_string = "总共找到 " + Object.keys(block).length + " 个连通分支\n";
             var cnt = 0;
-            for(const element in block) {
+            for (const element in block) {
                 cnt += 1;
                 answer_string += "第 " + cnt + " 个连通分支: " + JSON.stringify(block[element]);
                 answer_string += "\n";
@@ -248,21 +248,63 @@
             return regex.test(str);
         }
 
+        function parseStringWithX(input) {
+            // 第一步：按X分割字符串
+            const xSegments = input.split('X');
+
+            // 第二步：处理每个X分割后的段
+            const processedSegments = [];
+
+            for (const xSegment of xSegments) {
+                let subSegments;
+
+                // 检查当前段是否有逗号
+                if (xSegment.includes(',')) {
+                    // 有逗号，按逗号分割
+                    subSegments = xSegment.split(',');
+                } else {
+                    // 没有逗号，逐个字符分割
+                    subSegments = Array.from(xSegment);
+                }
+
+                // 处理每个子段：过滤空字符串或全空格的段，并转换为整数
+                for (const subSegment of subSegments) {
+                    const trimmed = subSegment.trim();
+                    if (trimmed !== '') {
+                        // 逐个转换为整数
+                        const num = parseInt(trimmed, 10);
+                        if (!isNaN(num)) {
+                            processedSegments.push(num);
+                        }
+                    }
+                }
+            }
+
+            return processedSegments;
+        }
+
         // 处理文本
         function processText() {
             const text = inputText.value;
-            // 使用正则表达式将非数字字符替换为空格
-            const processedText = text.replace(/[^0-9]/g, ' ');
-            const integer_list = extractIntegers(processedText);
-
-            if(isOnlySpaces(processedText)) {
-                outputText.value = "PD_CODE 不合法（原因：输入数据中不包含任何整数），请重新输入";
-            }else if(integer_list.length % 4 != 0) {
-                outputText.value = "PD_CODE 不合法（原因：整数总数目不是四的倍数），请重新输入";
+            let integer_list = [];
+            if(text.includes("X")) {
+                integer_list = parseStringWithX(text);
             }else {
-                outputText.value = myAlgorithm(integer_list);
+                // 使用正则表达式将非数字字符替换为空格
+                const processedText = text.replace(/[^0-9]/g, ' ');
+                integer_list = extractIntegers(processedText);
             }
             
+            outputText.value = "";
+
+            if (integer_list.length == 0) {
+                outputText.value += "PD_CODE 不合法（原因：输入数据中不包含任何整数），请重新输入";
+            } else if (integer_list.length % 4 != 0) {
+                outputText.value += "PD_CODE 不合法（原因：整数总数目不是四的倍数），请重新输入";
+            } else {
+                outputText.value += myAlgorithm(integer_list);
+            }
+
             resultCount.textContent = `${outputText.value.length} 字符`;
 
             // 添加处理动画效果
