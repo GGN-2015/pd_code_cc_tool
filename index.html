@@ -283,6 +283,21 @@
             return processedSegments;
         }
 
+        function chunkList(inputList) {
+        // 检查列表长度是否为4的倍数
+        if (inputList.length % 4 !== 0) {
+            throw new Error("列表长度必须是4的倍数");
+        }
+
+        const result = [];
+        // 每4个元素为一组进行分割
+        for (let i = 0; i < inputList.length; i += 4) {
+            result.push(inputList.slice(i, i + 4));
+        }
+        
+        return result;
+    }
+
         // 处理文本
         function processText() {
             const text = inputText.value;
@@ -302,6 +317,7 @@
             } else if (integer_list.length % 4 != 0) {
                 outputText.value += "PD_CODE 不合法（原因：整数总数目不是四的倍数），请重新输入";
             } else {
+                outputText.value += "识别到 PD_CODE: " + JSON.stringify(chunkList(integer_list)) + "\n";
                 outputText.value += myAlgorithm(integer_list);
             }
 
